@@ -1,5 +1,5 @@
 import React, {Component} from "react";
-
+import "../css/Board.css"
 
 export const SIZE = 30;
 const SCALE = 15;
@@ -18,25 +18,28 @@ class Board extends Component {
             xV: 0,
             yV: 1,
             tail: [{x: SIZE / 2 - 1, y: SIZE / 2 - 2}, {x: SIZE / 2 - 1, y: SIZE / 2 - 3}]
-        }
+        },
+        game: false,
+        interval:null,
+        haveLost:false
     };
 
     move = () => {
         let newTail;
-        if(this.state.grow){
+        if (this.state.grow) {
             newTail = this.state.snake.tail.slice(0);
             this.setState({
-                grow:false
+                grow: false
             })
-        }else{
+        } else {
             newTail = this.state.snake.tail.slice(0, this.state.snake.tail.length - 1);
         }
         newTail.unshift({x: this.state.snake.x, y: this.state.snake.y});
         this.setState({
             snake: {
                 ...this.state.snake,
-                x: (this.state.snake.x + this.state.snake.xV) % SIZE,
-                y: (this.state.snake.y + this.state.snake.yV) % SIZE,
+                x: (this.state.snake.x + this.state.snake.xV)>=0 ? (this.state.snake.x + this.state.snake.xV)%SIZE : SIZE-1,
+                y: (this.state.snake.y + this.state.snake.yV)>=0 ? (this.state.snake.y + this.state.snake.yV)%SIZE : SIZE-1,
                 tail: newTail
             }
         });
@@ -93,9 +96,15 @@ class Board extends Component {
         if (x === this.state.aX && y === this.state.aY)
             this.eatApple();
         newBoard[y][x] = "X";
+        let b = false;
         tail.forEach(el => {
+            if (x === el.x && y === el.y) {
+                this.lose();
+                b = true;
+            }
             newBoard[el.y][el.x] = "X";
         });
+        if ( b ) return;
         newBoard[this.state.aY][this.state.aX] = "A";
         this.setState({
             board: newBoard
@@ -109,7 +118,7 @@ class Board extends Component {
             result: this.state.result + 1,
             aX: Math.floor(Math.random() * SIZE),
             aY: Math.floor(Math.random() * SIZE),
-            grow:true
+            grow: true
         });
     };
 
@@ -129,9 +138,11 @@ class Board extends Component {
                 if (this.state.board[i][j] === 'X') {
                     ctx.fillStyle = "#00e64d";
                     ctx.fillRect(j * SCALE, i * SCALE, SCALE, SCALE);
-                }
-                if (this.state.board[i][j] === 'A') {
+                }else if (this.state.board[i][j] === 'A') {
                     ctx.fillStyle = "#ff3300";
+                    ctx.fillRect(j * SCALE, i * SCALE, SCALE, SCALE);
+                }else{
+                    ctx.fillStyle = "#000000";
                     ctx.fillRect(j * SCALE, i * SCALE, SCALE, SCALE);
                 }
             }
@@ -139,18 +150,54 @@ class Board extends Component {
 
     };
 
+    clear = () =>{
+        let canvas = document.getElementById('myCanvas');
+        let ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
 
-    componentDidMount() {
+    lose = () => {
+        this.clear();
+        clearInterval(this.state.interval);
+        this.setState({
+            board: [],
+            result: 0,
+            aX: Math.floor(Math.random() * SIZE),
+            aY: Math.floor(Math.random() * SIZE),
+            grow: false,
+            snake: {
+                x: SIZE / 2 - 1,
+                y: SIZE / 2 - 1,
+                xV: 0,
+                yV: 1,
+                tail: [{x: SIZE / 2 - 1, y: SIZE / 2 - 2}, {x: SIZE / 2 - 1, y: SIZE / 2 - 3}]
+            },
+            game: false,
+            interval:null,
+            haveLost:true
+        });
+    };
+
+    startGame = () => {
         document.addEventListener("keydown", (e) => this.changeDirection(e));
-        setInterval(this.move, 1000);
-    }
+        let interval = setInterval(this.move, 100);
+        this.setState({
+            game: true,
+            interval
+        });
+    };
+
 
 
     render() {
         return (
             <main>
-                <h3>Result: {this.state.result}</h3>
-                <canvas width="500" height="500" style={{background: "black"}} id="myCanvas"></canvas>
+                <h2>Result: {this.state.result}</h2>
+                {this.state.haveLost && <h3>You lost!</h3>}
+                {!this.state.game&&<button onClick={this.startGame} autoFocus>{this.state.haveLost?"Play again":"Start"}</button>}
+                <canvas width={SIZE*SCALE} height={SIZE*SCALE} style={{background: "black", marginTop:"25px"}} id="myCanvas">
+                Your browser doesn't support canvas
+                </canvas>
             </main>
         );
     }
